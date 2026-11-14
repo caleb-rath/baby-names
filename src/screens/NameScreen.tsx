@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { isYesType } from '../types';
+import { isAlmostPair, isMatchPair } from '../types';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -37,7 +37,14 @@ export default function NameScreen() {
     );
   }
 
-  const matched = isYesType(my?.type) && isYesType(their?.type);
+  const matched = isMatchPair(my?.type, their?.type);
+  const almost = isAlmostPair(my?.type, their?.type);
+  const almostLine =
+    my?.type === 'maybe' && their?.type === 'maybe'
+      ? 'You both said maybe. A love from either of you adds it to Our names.'
+      : my?.type === 'maybe'
+        ? `${partnerName} said yes, you said maybe. Say yes or love to add it to Our names.`
+        : `You said yes, ${partnerName} said maybe. Change yours to Love to add it now.`;
   const gender: Gender = tag ?? name.gender;
   const { initials, warning } = checkInitials(name.name, lastName);
   const meta = [name.custom ? 'Added by you two' : name.origin, name.rank ? `#${name.rank} in 2024` : null, name.custom ? null : eraLine(name)]
@@ -80,6 +87,13 @@ export default function NameScreen() {
         </Text>
       )}
 
+      {matched && my!.type === 'maybe' && (
+        <View style={[s.maybe, { backgroundColor: t.surfaceAlt }]}>
+          <Text style={[type.callout, { color: t.ink, flex: 1 }]}>You said maybe. {partnerName}’s love put it on the list.</Text>
+          <Button label="Make it a yes" variant="secondary" onPress={() => setAnswer(itemId, 'like')} />
+        </View>
+      )}
+
       {matched && (
         <View style={{ marginTop: 24, gap: 10 }}>
           <Text style={[type.section, { color: t.ink }]}>Girl, boy or either</Text>
@@ -93,6 +107,13 @@ export default function NameScreen() {
               { value: 'N', label: 'Either' },
             ]}
           />
+        </View>
+      )}
+
+      {almost && (
+        <View style={[s.almost, { backgroundColor: t.surfaceAlt }]}>
+          <Text style={[type.overline, { color: t.coral }]}>ALMOST</Text>
+          <Text style={[type.callout, { color: t.ink }]}>{almostLine}</Text>
         </View>
       )}
 
@@ -145,5 +166,7 @@ const s = StyleSheet.create({
   card: { borderRadius: 20, borderWidth: 1, padding: 18, gap: 4, marginTop: 24 },
   answers: { flexDirection: 'row', gap: 12, marginTop: 24 },
   answer: { flex: 1, borderRadius: 20, borderWidth: 1, padding: 16, alignItems: 'center', gap: 4 },
+  maybe: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10, borderRadius: 18, padding: 14, marginTop: 16 },
+  almost: { gap: 4, borderRadius: 18, padding: 14, marginTop: 16 },
   remove: { alignItems: 'center', justifyContent: 'center', minHeight: 52, marginTop: 28 },
 });

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useStore } from './useStore';
-import { computeMatches } from '../lib/matches';
+import { computeAlmost, computeMatches, type Almost } from '../lib/matches';
 import { sharedStreak } from '../lib/streak';
 import { lookupName } from '../lib/names';
 import { appUrl, shareText } from '../lib/platform';
@@ -27,6 +27,27 @@ export function useOurNames(): OurName[] {
         return [{ ...m, name, gender: tags[m.itemId] ?? name.gender, isNew: m.at > seenAt }];
       }),
     [mine, partner, custom, tags, seenAt]
+  );
+}
+
+export interface AlmostName extends Almost {
+  name: BabyName;
+}
+
+/** Maybe + Yes and Maybe + Maybe, newest first. */
+export function useAlmostNames(): AlmostName[] {
+  const mine = useStore((s) => s.mine);
+  const partner = useStore((s) => s.partner);
+  const custom = useStore((s) => s.custom);
+  return useMemo(
+    () =>
+      computeAlmost(mine, partner)
+        .flatMap((a) => {
+          const name = lookupName(a.itemId, custom);
+          return name ? [{ ...a, name }] : [];
+        })
+        .sort((a, b) => b.at - a.at),
+    [mine, partner, custom]
   );
 }
 

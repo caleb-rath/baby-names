@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useStore } from '../store/useStore';
-import { useOurNames, type OurName } from '../store/hooks';
+import { useAlmostNames, useOurNames, usePartnerName, type OurName } from '../store/hooks';
 import { duelScores } from '../lib/duels';
 import { IconButton, Pills, Screen } from '../components/ui';
 import { font, type, useTheme } from '../theme';
@@ -14,6 +14,8 @@ export default function OurNamesScreen() {
   const t = useTheme();
   const nav = useNavigation<any>();
   const names = useOurNames();
+  const almost = useAlmostNames();
+  const partnerName = usePartnerName();
   const duels = useStore((s) => s.duels);
   const [sort, setSort] = useState<Sort>('recent');
 
@@ -96,6 +98,34 @@ export default function OurNamesScreen() {
         ))}
       </View>
 
+
+      {almost.length > 0 && (
+        <View style={{ marginTop: 28 }}>
+          <Text style={[type.section, { color: t.ink }]} accessibilityRole="header">
+            Almost
+          </Text>
+          <Text style={[type.caption, { color: t.muted, marginTop: 2 }]}>A maybe is holding these back. Tap one to decide.</Text>
+          {almost.map((a) => {
+            const who = a.maybeBy === 'both' ? 'Both maybe' : a.maybeBy === 'me' ? 'Your maybe' : `${partnerName}’s maybe`;
+            return (
+              <Pressable
+                key={a.itemId}
+                onPress={() => open(a.itemId)}
+                accessibilityRole="button"
+                accessibilityLabel={`${a.name.name}, almost. ${who}.`}
+                style={({ pressed }) => [s.row, { borderBottomColor: t.line, backgroundColor: pressed ? t.surfaceAlt : 'transparent' }]}
+              >
+                <Text style={[type.nameRow, { color: t.muted }]} numberOfLines={1}>
+                  {a.name.name}
+                </Text>
+                <Text style={[type.caption, s.meaning, { color: a.maybeBy === 'partner' ? t.muted : t.coral }]} numberOfLines={1}>
+                  {who}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
 
       <Pressable onPress={() => nav.navigate('AddName')} accessibilityRole="button" style={({ pressed }) => [s.add, { borderColor: t.line, opacity: pressed ? 0.7 : 1 }]}>
         <Text style={[type.button, { color: t.ink }]}>+ Add a name</Text>

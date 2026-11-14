@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { isYesType } from '../types';
+import { isMatchPair, isYesType } from '../types';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -150,7 +150,7 @@ function Summary({ title, stack, onMore, onBack, onUndo }: { title: string; stac
   const moreLeft = useMemo(() => (pack ? pack.pool(useStore.getState().packContext()).length : 0), [mine]);
 
   const yes = stack.items.filter((id) => isYesType(mine[id]?.type));
-  const matches = yes.filter((id) => isYesType(partner[id]?.type));
+  const matches = stack.items.filter((id) => isMatchPair(mine[id]?.type, partner[id]?.type));
   const alsoYes = yes.filter((id) => !matches.includes(id));
   const unseen = yes.filter((id) => !partner[id]).length;
   const names = (ids: string[]) => ids.map((id) => lookupName(id, custom)?.name).filter(Boolean) as string[];

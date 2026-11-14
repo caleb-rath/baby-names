@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { isYesType } from '../types';
+import { isMatchPair } from '../types';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -15,7 +15,6 @@ import DirectionPad from '../components/DirectionPad';
 import type { Couch, Swipe, SwipeType } from '../types';
 
 const LABEL: Record<SwipeType, string> = { pass: 'No', maybe: 'Maybe', like: 'Yes', super: 'Love' };
-const yes = (x?: { type: SwipeType }) => isYesType(x?.type);
 
 /** Same names on both phones, at the same time. Answers stay hidden until you've both answered. */
 export default function CouchScreen() {
@@ -90,7 +89,7 @@ function Game({ couch, ended }: { couch: Couch; ended?: boolean }) {
   const my = current ? inGame(mine[current]) : undefined;
   const their = current ? inGame(partner[current]) : undefined;
   const revealed = !!my && !!their;
-  const isMatch = revealed && yes(my) && yes(their);
+  const isMatch = revealed && isMatchPair(my?.type, their?.type);
 
   useEffect(() => {
     if (isMatch) buzz('thump');
@@ -112,7 +111,7 @@ function Game({ couch, ended }: { couch: Couch; ended?: boolean }) {
 
   if (!current || ended) {
     const all = queue.filter(both);
-    const matched = all.filter((id) => yes(mine[id]) && yes(partner[id]));
+    const matched = all.filter((id) => isMatchPair(mine[id]?.type, partner[id]?.type));
     const names = matched.map((id) => lookupName(id, custom)?.name).filter(Boolean);
     return (
       <Screen edges={['top', 'bottom']} footer={<Button label="Done" variant="dark" onPress={end} />}>

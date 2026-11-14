@@ -1,7 +1,13 @@
 export type Gender = 'M' | 'F' | 'N';
 export type SwipeType = 'like' | 'pass' | 'super' | 'maybe';
-/** Yes or Love. Maybe is neither a yes nor a veto: it never matches, and it comes back in Second look. */
+/** Yes or Love. Maybe is neither a yes nor a veto, and it comes back in Second look. */
 export const isYesType = (t?: SwipeType | null) => t === 'like' || t === 'super';
+/** On Our names: both said Yes or Love, or one loves it and the other said maybe. */
+export const isMatchPair = (a?: SwipeType | null, b?: SwipeType | null) =>
+  (isYesType(a) && isYesType(b)) || (a === 'super' && b === 'maybe') || (a === 'maybe' && b === 'super');
+/** In Almost: Maybe + Yes, or Maybe + Maybe. Either of you can settle it from the name page. */
+export const isAlmostPair = (a?: SwipeType | null, b?: SwipeType | null) =>
+  (a === 'maybe' && (b === 'like' || b === 'maybe')) || (b === 'maybe' && a === 'like');
 export type GenderFilter = 'all' | 'F' | 'M' | 'N';
 
 export interface BabyName {
@@ -87,7 +93,9 @@ export interface Match {
   bothLove: boolean;
   iLove: boolean;
   partnerLoves: boolean;
-  /** When the second person said yes. */
+  /** Matched through Love + Maybe: who said maybe. */
+  maybeBy?: 'me' | 'partner';
+  /** When the second person answered. */
   at: number;
 }
 

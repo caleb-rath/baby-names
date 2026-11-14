@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { Couch, CustomName, Duel, Gender, GenderFilter, HistoryEntry, OutboxOp, Session, Stack, Swipe, SwipeType } from '../types';
-import { isYesType, outboxKey } from '../types';
+import { isMatchPair, outboxKey } from '../types';
 import * as api from '../lib/supabase';
 import { ID_BY_SPELLING, NAMES_BY_ID, nameSlug } from '../data/names';
 import { buildStack, packById, type PackContext } from '../lib/packs';
@@ -96,7 +96,6 @@ const emptySession = () => ({
   matchAlert: null,
 });
 
-const isYes = (s?: Swipe) => isYesType(s?.type);
 const newId = () => (globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, () => ((Math.random() * 16) | 0).toString(16)));
 
 export const useStore = create<State>()(
@@ -298,11 +297,11 @@ export const useStore = create<State>()(
 
         swipe: (itemId, type) => {
           const before = get().mine[itemId];
-          const wasMatch = isYes(before) && isYes(get().partner[itemId]);
+          const wasMatch = isMatchPair(before?.type, get().partner[itemId]?.type);
           const prev = write(itemId, type);
           // Answering the same card twice in a row (key repeat) keeps one undo step, which goes back to the first answer.
           set((s) => (s.history.at(-1)?.itemId === itemId ? {} : { history: [...s.history.slice(-49), { itemId, prev }] }));
-          const matched = !wasMatch && isYesType(type) && isYes(get().partner[itemId]);
+          const matched = !wasMatch && isMatchPair(type, get().partner[itemId]?.type);
           if (matched) alertMatch(itemId);
           return matched;
         },
