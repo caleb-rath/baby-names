@@ -10,6 +10,7 @@ import { Button, Screen, Segmented, TopBar } from '../components/ui';
 import { lookupName } from '../lib/names';
 import { font, type, useTheme } from '../theme';
 import type { BabyName } from '../types';
+import FitName from '../components/FitName';
 
 const ROUND = 15;
 
@@ -135,9 +136,9 @@ function Choice({ name, onPress }: { name: BabyName; onPress: () => void }) {
       accessibilityLabel={`Pick ${name.name}`}
       style={({ pressed }) => [s.choice, { backgroundColor: pressed ? t.hero : t.surface, borderColor: t.line, transform: [{ scale: pressed ? 0.98 : 1 }] }]}
     >
-      <Text style={[type.nameLarge, { color: t.ink, textAlign: 'center' }]} numberOfLines={1} adjustsFontSizeToFit>
+      <FitName size={type.nameLarge.fontSize} style={[type.nameLarge, { color: t.ink, textAlign: 'center' }]}>
         {name.name}
-      </Text>
+      </FitName>
       {!!name.meaning && <Text style={[type.meaningSmall, { color: t.muted, textAlign: 'center', fontSize: 17 }]}>“{name.meaning}”</Text>}
     </Pressable>
   );

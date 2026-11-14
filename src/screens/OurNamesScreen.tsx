@@ -7,6 +7,7 @@ import { useAlmostNames, useOurNames, usePartnerName, type OurName } from '../st
 import { duelScores } from '../lib/duels';
 import { IconButton, Pills, Screen } from '../components/ui';
 import { font, type, useTheme } from '../theme';
+import FitName from '../components/FitName';
 
 type Sort = 'recent' | 'F' | 'M' | 'order';
 
@@ -67,7 +68,7 @@ export default function OurNamesScreen() {
       {hero && (
         <Pressable onPress={() => open(hero.itemId)} accessibilityRole="button" accessibilityLabel={`New match: ${hero.name.name}`} style={[s.hero, { backgroundColor: t.hero }]}>
           <Text style={[type.overline, { color: t.coral }]}>NEW MATCH{hero.bothLove ? ' · YOU BOTH LOVE IT' : ''}</Text>
-          <Text style={[type.nameLarge, { color: t.ink }]}>{hero.name.name}</Text>
+          <FitName size={type.nameLarge.fontSize} lines={2} style={[type.nameLarge, { color: t.ink }]}>{hero.name.name}</FitName>
           {!!hero.name.meaning && <Text style={[type.meaning, { color: t.ink }]}>“{hero.name.meaning}”</Text>}
         </Pressable>
       )}

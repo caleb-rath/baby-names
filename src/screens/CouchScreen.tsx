@@ -13,6 +13,7 @@ import { ProgressBar } from './DiscoverScreen';
 import { genderColors, type, useTheme } from '../theme';
 import DirectionPad from '../components/DirectionPad';
 import type { Couch, Swipe, SwipeType } from '../types';
+import FitName from '../components/FitName';
 
 const LABEL: Record<SwipeType, string> = { pass: 'No', maybe: 'Maybe', like: 'Yes', super: 'Love' };
 
@@ -139,9 +140,9 @@ function Game({ couch, ended }: { couch: Couch; ended?: boolean }) {
       <TopBar back="End" onBack={end} title={`${idx + 1} of ${queue.length}`} />
       <ProgressBar value={idx / queue.length} color={g.ink} />
       <View style={s.stage}>
-        <Text style={[type.nameHero, { color: t.ink, textAlign: 'center' }]} numberOfLines={1} adjustsFontSizeToFit>
+        <FitName size={type.nameHero.fontSize} min={28} style={[type.nameHero, { color: t.ink, textAlign: 'center' }]}>
           {name.name}
-        </Text>
+        </FitName>
         {name.meaning ? (
           <Text style={[type.meaning, { color: t.ink, textAlign: 'center' }]}>“{name.meaning}”</Text>
         ) : (

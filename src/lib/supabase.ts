@@ -194,10 +194,19 @@ export async function setCouch(sessionId: string, active: boolean, seed?: string
   if (error) throw error;
 }
 
+let channelSeq = 0;
+
+/** Stops a channel from subscribeToSession and forgets it, so it can't rejoin on its own. */
+export function closeChannel(ch: RealtimeChannel) {
+  supabase.removeChannel(ch).catch(() => {});
+}
+
 /** Calls onChange whenever anything in this list changes. RLS limits events to members. */
 export function subscribeToSession(sessionId: string, onChange: () => void, onDropped?: () => void): RealtimeChannel {
   const filter = `session_id=eq.${sessionId}`;
-  let ch = supabase.channel(`session:${sessionId}`);
+  // A fresh topic each time: supabase.channel() hands back an existing channel with the same name, even one
+  // that is still closing, which left reconnects with doubled listeners or none at all.
+  let ch = supabase.channel(`session:${sessionId}:${++channelSeq}`);
   for (const table of ['swipes', 'session_members', 'custom_names', 'name_tags', 'duels', 'couch']) {
     ch = ch.on('postgres_changes', { event: '*', schema: 'public', table, filter }, onChange);
   }

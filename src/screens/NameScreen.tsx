@@ -11,6 +11,7 @@ import { checkInitials } from '../lib/initials';
 import { Button, Screen, Segmented, Sheet, TopBar } from '../components/ui';
 import { font, type, useTheme } from '../theme';
 import type { Gender, SwipeType } from '../types';
+import FitName from '../components/FitName';
 
 
 export default function NameScreen() {
@@ -54,9 +55,11 @@ export default function NameScreen() {
   return (
     <Screen scroll edges={['top', 'bottom']}>
       <TopBar back={matched ? 'Our names' : 'Back'} />
-      <Text style={[type.nameHero, { color: t.ink, marginTop: 16 }]} accessibilityRole="header" adjustsFontSizeToFit numberOfLines={1}>
-        {name.name}
-      </Text>
+      <View style={{ marginTop: 16, alignSelf: 'stretch' }}>
+        <FitName size={type.nameHero.fontSize} min={28} style={[type.nameHero, { color: t.ink }]} accessibilityRole="header">
+          {name.name}
+        </FitName>
+      </View>
       {name.meaning ? (
         <Text style={[type.meaning, { color: t.ink, fontSize: 22, lineHeight: 30 }]}>“{name.meaning}”</Text>
       ) : null}

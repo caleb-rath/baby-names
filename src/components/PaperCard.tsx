@@ -4,13 +4,14 @@ import type { BabyName } from '../types';
 import { GENDER_LABEL, altsLine, eraLine } from '../lib/names';
 import { checkInitials } from '../lib/initials';
 import { font, genderColors, type, useTheme, wash } from '../theme';
+import FitName from './FitName';
 
 /** One card in the deck: a soft wash in the name's gender color. Shows the name, its meaning, and how it sounds with your last name. Nothing about your partner. */
 export default function PaperCard({ name, lastName }: { name: BabyName; lastName: string }) {
   const t = useTheme();
   const g = genderColors(t, name.gender);
   const meta = name.custom ? 'Added by you two' : name.origin;
-  // Shrink long names by length; adjustsFontSizeToFit does nothing on the web.
+  // Start smaller for longer names; FitName then shrinks further if it still doesn't fit.
   const len = name.name.length;
   const size = len > 22 ? 30 : len > 14 ? 36 : len > 10 ? 44 : len > 7 ? 54 : 62;
   const facts: [string, string][] = [];
@@ -32,9 +33,9 @@ export default function PaperCard({ name, lastName }: { name: BabyName; lastName
         </Text>
       </View>
       <View style={s.middle}>
-        <Text style={[type.nameHero, { color: t.ink, fontSize: size, lineHeight: size * 1.08 }]} numberOfLines={2} adjustsFontSizeToFit>
+        <FitName size={size} lines={2} style={[type.nameHero, { color: t.ink, lineHeight: type.nameHero.fontSize * 1.08 }]}>
           {name.name}
-        </Text>
+        </FitName>
         {name.meaning ? (
           <Text style={[type.meaning, { color: g.ink }]}>“{name.meaning}”</Text>
         ) : (

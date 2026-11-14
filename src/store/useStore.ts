@@ -33,6 +33,8 @@ interface State {
   justCreated: boolean;
   /** Set when a name you just answered becomes a match, even if your partner's yes landed a moment later. The deck shows it. */
   matchAlert: { itemId: string; n: number } | null;
+  /** Names you've already been told are a match, so a sync or reload never announces one twice. null until the first sync. */
+  alerted: Record<string, true> | null;
   /** You closed the "add a backup email" nudge. */
   emailNudgeDismissed: boolean;
   sync: SyncStatus;
@@ -78,6 +80,10 @@ let retryTimer: ReturnType<typeof setTimeout> | null = null;
 let refreshTimer: ReturnType<typeof setTimeout> | null = null;
 let refreshRun = 0;
 let flushing = false;
+// Bumped on every local answer change, so a refresh can tell which answers changed after its fetch began.
+let writeSeq = 0;
+const lastWrite = new Map<string, number>();
+const touch = (itemId: string) => lastWrite.set(itemId, ++writeSeq);
 
 const emptySession = () => ({
   session: null,
@@ -94,6 +100,7 @@ const emptySession = () => ({
   listSeenAt: Date.now(),
   justCreated: false,
   matchAlert: null,
+  alerted: null as Record<string, true> | null,
 });
 
 const newId = () => (globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, () => ((Math.random() * 16) | 0).toString(16)));
@@ -102,22 +109,26 @@ export const useStore = create<State>()(
   persist(
     (set, get) => {
       function subscribe(sessionId: string) {
-        channel?.unsubscribe();
-        channel = api.subscribeToSession(
+        if (channel) api.closeChannel(channel);
+        const mine: RealtimeChannel = api.subscribeToSession(
           sessionId,
           () => {
             // Changes arrive in bursts; one refetch per burst.
             if (refreshTimer) clearTimeout(refreshTimer);
             refreshTimer = setTimeout(() => get().refresh(), 350);
           },
-          // Live updates dropped (phone slept, network blip): catch up, then reconnect.
+          // Live updates dropped (phone slept, network blip): catch up, then reconnect. Only once per channel.
           () => {
+            if (channel !== mine) return;
+            channel = null;
+            api.closeChannel(mine);
             get().refresh();
             setTimeout(() => {
-              if (get().session?.id === sessionId) subscribe(sessionId);
+              if (get().session?.id === sessionId && !channel) subscribe(sessionId);
             }, 3000);
           }
         );
+        channel = mine;
       }
 
       function queue(op: OutboxOp) {
@@ -129,6 +140,7 @@ export const useStore = create<State>()(
         const prev = get().mine[itemId] ?? null;
         const now = Date.now();
         const isAdded = added || prev?.added;
+        touch(itemId);
         set((s) => {
           const mine = { ...s.mine };
           if (type) mine[itemId] = { itemId, type, createdAt: prev?.createdAt ?? now, updatedAt: now, ...(isAdded && { added: true }) };
@@ -140,7 +152,8 @@ export const useStore = create<State>()(
       }
 
       function alertMatch(itemId: string) {
-        set((s) => ({ matchAlert: { itemId, n: (s.matchAlert?.n ?? 0) + 1 } }));
+        if (get().alerted?.[itemId]) return;
+        set((s) => ({ matchAlert: { itemId, n: (s.matchAlert?.n ?? 0) + 1 }, alerted: { ...s.alerted, [itemId]: true } }));
       }
 
       async function enter(sessionId: string, justCreated = false) {
@@ -208,7 +221,8 @@ export const useStore = create<State>()(
         },
 
         signedInWithEmail: async (userId, email) => {
-          channel?.unsubscribe();
+          if (channel) api.closeChannel(channel);
+          channel = null;
           set({ ...emptySession(), userId, email });
           const found = await api.findMySession();
           if (!found) return false;
@@ -218,7 +232,7 @@ export const useStore = create<State>()(
 
         leaveSession: async () => {
           const { session } = get();
-          channel?.unsubscribe();
+          if (channel) api.closeChannel(channel);
           channel = null;
           if (session) await api.leaveSession(session.id).catch(() => {});
           set(emptySession());
@@ -229,6 +243,9 @@ export const useStore = create<State>()(
           if (!session || !userId) return;
           set({ sync: 'syncing' });
           const run = ++refreshRun;
+          // Answers still sending when the fetch starts, or changed after it, may be missing from what comes back.
+          const seqAtStart = writeSeq;
+          const pending = new Set(Object.values(get().outbox).filter((op) => op.kind === 'upsert' || op.kind === 'delete').map((op) => op.itemId));
           try {
             const [fresh, swipes, extras] = await Promise.all([
               api.fetchSession(session.id, userId),
@@ -243,6 +260,11 @@ export const useStore = create<State>()(
             // The server is the truth for my answers, except writes still waiting to send.
             const before = get();
             const local = before.mine;
+            for (const [itemId, seq] of lastWrite) {
+              if (seq <= seqAtStart && !pending.has(itemId)) continue;
+              if (local[itemId]) mine[itemId] = local[itemId];
+              else delete mine[itemId];
+            }
             const custom = [...extras.custom];
             const tags = { ...extras.tags };
             const duels = [...extras.duels];
@@ -253,13 +275,17 @@ export const useStore = create<State>()(
               else if (op.kind === 'tag') tags[op.itemId] = op.gender;
               else if (op.kind === 'duel') !duels.some((d) => d.id === op.duel.id) && duels.push(op.duel);
             }
-            // Your partner's yes landed just after yours: still tell you it's a match.
-            const had = new Set(computeMatches(before.mine, before.partner).map((m) => m.itemId));
-            const fresh2 = computeMatches(mine, partner).filter((m) => !had.has(m.itemId) && mine[m.itemId].updatedAt > Date.now() - 120_000);
+            // Your partner's yes landed just after yours: still tell you it's a match (once per name, ever).
+            const matchesNow = computeMatches(mine, partner);
+            const seen = before.alerted;
+            const fresh2 = seen ? matchesNow.filter((m) => !seen[m.itemId] && mine[m.itemId].updatedAt > Date.now() - 120_000) : [];
+            const alerted = { ...seen };
+            for (const m of matchesNow) alerted[m.itemId] = true;
             // A filter change from either phone: stacks dealt under the old one would show the wrong names.
             const filterChanged = before.session?.genderFilter !== fresh.genderFilter && !!before.session?.code;
             set({ session: fresh, mine, partner, custom, tags, duels, couch: extras.couch, sync: 'idle', ...(filterChanged && { stacks: {} }) });
             if (fresh2.length) alertMatch(fresh2[fresh2.length - 1].itemId);
+            set({ alerted });
             get().flush();
           } catch {
             set({ sync: 'offline' });
@@ -315,6 +341,7 @@ export const useStore = create<State>()(
           if (!last) return null;
           set((s) => ({ history: s.history.slice(0, -1) }));
           if (last.prev) {
+            touch(last.itemId);
             set((s) => ({ mine: { ...s.mine, [last.itemId]: last.prev! } }));
             queue({ kind: 'upsert', itemId: last.itemId, type: last.prev.type, ...(last.prev.added && { added: true }) });
           } else write(last.itemId, null);
@@ -464,6 +491,7 @@ export const useStore = create<State>()(
         stacks: s.stacks,
         listSeenAt: s.listSeenAt,
         justCreated: s.justCreated,
+        alerted: s.alerted,
         emailNudgeDismissed: s.emailNudgeDismissed,
       }),
     }
