@@ -1,7 +1,7 @@
 import { BABY_NAMES } from '../data/names';
 import type { Couch, CustomName, GenderFilter, Swipe } from '../types';
 import { isYesType } from '../types';
-import { lookupName, matchesFilter } from './names';
+import { dealWeight, lookupName, matchesFilter } from './names';
 import { shuffleBy } from './random';
 
 export const COUCH_SIZE = 20;
@@ -29,7 +29,7 @@ export function couchQueue(couch: Couch, custom: CustomName[], filter: GenderFil
   });
   const fresh = all.filter((n) => !before(mine[n.id]) && !before(partner[n.id]));
   const likedPick = shuffleBy(liked, (n) => n.id, `couch-liked:${couch.seed}`).slice(0, COUCH_LIKED).map((n) => n.id);
-  const freshPick = shuffleBy(fresh, (n) => n.id, `couch:${couch.seed}`, (n) => (n.rank && n.rank <= 300 ? 3 : n.rank ? 2 : 1))
+  const freshPick = shuffleBy(fresh, (n) => n.id, `couch:${couch.seed}`, dealWeight)
     .slice(0, COUCH_SIZE - likedPick.length)
     .map((n) => n.id);
   // Seeded slots for the liked names, never in the first two, so it doesn't open with a sure thing.

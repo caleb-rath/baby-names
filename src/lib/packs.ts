@@ -1,7 +1,7 @@
 import { BABY_NAMES, ORIGIN_GROUPS } from '../data/names';
 import type { BabyName, CustomName, GenderFilter, Swipe } from '../types';
 import { isYesType } from '../types';
-import { lookupName, matchesFilter } from './names';
+import { dealWeight, lookupName, matchesFilter } from './names';
 import { dayKey, hash, shuffleBy } from './random';
 
 export const STACK_SIZE = 10;
@@ -40,7 +40,7 @@ const unanswered = (ctx: PackContext, pred: (n: BabyName) => boolean) =>
  * The card never says your partner liked it, so it doesn't sway you; it just makes matches come sooner.
  */
 function order(ctx: PackContext, names: BabyName[], packSeed: string, weighted = false): string[] {
-  const shuffled = shuffleBy(names, (n) => n.id, `${ctx.seed}:${packSeed}`, weighted ? (n) => (n.rank && n.rank <= 300 ? 3 : n.rank ? 2 : 1) : undefined);
+  const shuffled = shuffleBy(names, (n) => n.id, `${ctx.seed}:${packSeed}`, weighted ? dealWeight : undefined);
   const yes = (n: BabyName) => isYesType(ctx.partner[n.id]?.type);
   const boosted = shuffled.filter(yes);
   const rest = shuffled.filter((n) => !yes(n));

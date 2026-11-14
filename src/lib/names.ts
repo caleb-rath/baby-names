@@ -21,6 +21,16 @@ export function matchesFilter(n: BabyName, filter: GenderFilter): boolean {
   return n.gender === filter || n.gender === 'N';
 }
 
+/**
+ * How often a name comes up in Today's 10 and Couch mode. Names in use now come up most, then names that were common
+ * when you were growing up (Gary, Kathy); rare finds still show up, about 1 card in 5.
+ */
+export function dealWeight(n: BabyName): number {
+  if (n.rank && n.rank <= 300) return 4;
+  if (n.rank) return 2.5;
+  return n.tags.includes('p') ? 2 : 1;
+}
+
 export const GENDER_LABEL = { F: 'Girl', M: 'Boy', N: 'Either' } as const;
 
 /** Something true about every name, for cards with no known meaning: when it was popular. */

@@ -39,8 +39,28 @@ def ranks(path):
             out.setdefault(n, {})[g] = i
     return out
 
-def add_tags(out, ssa_dir):
+def best_ranks_since(path, since=1950):
+    """(name, sex) -> best yearly US rank from `since` on."""
+    by_year = defaultdict(list)
+    with open(path) as f:
+        for r in csv.DictReader(f):
+            y = int(float(r['year']))
+            if y >= since: by_year[(y, r['sex'])].append((int(float(r['n'])), r['name']))
+    best = {}
+    for (_, sx), rows in by_year.items():
+        rows.sort(reverse=True)
+        for i, (_, n) in enumerate(rows[:1000], 1):
+            best[(n, sx)] = min(best.get((n, sx), 9999), i)
+    return best
+
+def was_common(v, best):
+    """Top 300 for its sex in some year since 1950, under any of the card's spellings."""
+    sexes = ['F', 'M'] if v['gender'] == 'N' else [v['gender']]
+    return any(best.get((n, sx), 9999) <= 300 for n in [v['name'], *v.get('alts', [])] for sx in sexes)
+
+def add_tags(out, ssa_dir, ranks_since=None):
     hist, tot = load_history(f'{ssa_dir}/all.csv')
+    ranks_since = ranks_since or best_ranks_since(f'{ssa_dir}/all.csv')
     r15 = {}
     for g, f in (('M', 'boy'), ('F', 'girl')):
         for i, n in enumerate(json.load(open(f'{ssa_dir}/{f}_2015.json'))['names'], 1):
@@ -64,6 +84,8 @@ def add_tags(out, ssa_dir):
         then = min((r15.get(n, {}).get(sx, 0) or 9999) for sx in sexes)
         if now and (then == 9999 or then - now >= 100):
             tags.append('r')
+        if was_common(v, ranks_since):
+            tags.append('p')  # familiar: a top-300 name at some point since 1950
         if n in NATURE: tags.append('n')
         if n in VIRTUE: tags.append('v')
         v['tags'] = ''.join(tags)
