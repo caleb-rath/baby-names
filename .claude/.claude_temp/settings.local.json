@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(npm *)",
+      "PowerShell(ls \"G:\\\\Files\\\\Projects\\\\Code\\\\BabyNames\" 2>$null; if \\(-not $?\\) { \"Directory empty or missing\" })"
+    ]
+  }
+}

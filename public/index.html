@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+    <title>BabyNames</title>
+    <meta name="description" content="Find a baby name you both love." />
+    <meta name="theme-color" content="#FBF7F2" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1C1722" media="(prefers-color-scheme: dark)" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <style id="expo-reset">
+      /* 100dvh tracks the visible area as the mobile address bar shows and hides. */
+      html, body { height: 100%; height: 100dvh; margin: 0; }
+      body {
+        overflow: hidden;
+        background: #FBF7F2;
+        /* No pull-to-refresh or swipe-to-go-back fighting with card swipes. */
+        overscroll-behavior: none;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      input, textarea { -webkit-user-select: text; user-select: text; }
+      @media (prefers-color-scheme: dark) { body { background: #1C1722; } }
+      #root { display: flex; height: 100%; flex: 1; }
+    </style>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <script>
+      if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
+        window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
+      }
+    </script>
+  </body>
+</html>
