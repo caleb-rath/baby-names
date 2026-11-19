@@ -158,14 +158,14 @@ export default function WelcomeScreen() {
           {step === 'code' && (
             <View style={s.form}>
               <Text style={[type.title, { color: t.ink }]} accessibilityRole="header">Check your email</Text>
-              <Text style={[type.body, { color: t.muted }]}>We sent a 6-digit code to {email.trim()}.</Text>
+              <Text style={[type.body, { color: t.muted }]}>We emailed a code to {email.trim()}.</Text>
               <Field
                 label="Code"
                 value={otp}
                 onChangeText={(v) => setOtp(v.replace(/\D/g, ''))}
                 keyboardType="number-pad"
                 autoComplete="one-time-code"
-                maxLength={6}
+                maxLength={10}
                 style={{ fontFamily: font.bold, fontSize: 24, letterSpacing: 6 }}
               />
               {err}

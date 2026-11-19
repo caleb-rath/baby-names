@@ -220,7 +220,7 @@ function SaveEmail({ email }: { email: string | null }) {
         </>
       ) : (
         <>
-          <Field label={`6-digit code sent to ${value.trim()}`} value={code} onChangeText={(v) => setCode(v.replace(/\D/g, ''))} keyboardType="number-pad" maxLength={6} autoComplete="one-time-code" />
+          <Field label={`Code sent to ${value.trim()}`} value={code} onChangeText={(v) => setCode(v.replace(/\D/g, ''))} keyboardType="number-pad" maxLength={10} autoComplete="one-time-code" />
           <Button small variant="dark" label="Save email" loading={busy} disabled={code.length < 6} style={{ alignSelf: 'flex-start' }} onPress={() => run(async () => {
             await confirmLinkEmail(value.trim(), code);
             useStore.getState().setEmail(value.trim());
