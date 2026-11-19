@@ -128,11 +128,32 @@ export async function updateMe(sessionId: string, userId: string, patch: Partial
   if (error) throw error;
 }
 
+// Supabase returns at most 1000 rows per request (Settings > API > Max rows), and silently drops the rest.
+const PAGE = 1000;
+
+/** Every row a query matches, a page at a time. The query must have a stable order, or pages can skip or repeat rows. */
+async function fetchPaged<T>(page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any }>): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await page(from, from + PAGE - 1);
+    if (error) throw error;
+    out.push(...(data ?? []));
+    if (!data || data.length < PAGE) return out;
+  }
+}
+
 export async function fetchAllSwipes(sessionId: string): Promise<Record<string, Swipe[]>> {
-  const { data, error } = await supabase.from('swipes').select('user_id, item_id, swipe_type, added, created_at, updated_at').eq('session_id', sessionId);
-  if (error) throw error;
+  const data = await fetchPaged<any>((from, to) =>
+    supabase
+      .from('swipes')
+      .select('user_id, item_id, swipe_type, added, created_at, updated_at')
+      .eq('session_id', sessionId)
+      .order('user_id')
+      .order('item_id')
+      .range(from, to)
+  );
   const out: Record<string, Swipe[]> = {};
-  for (const r of data ?? []) {
+  for (const r of data) {
     (out[r.user_id] ??= []).push({
       itemId: r.item_id,
       type: r.swipe_type as SwipeType,
@@ -164,16 +185,16 @@ export async function deleteAllMySwipes(sessionId: string, userId: string) {
 
 export async function fetchExtras(sessionId: string): Promise<{ custom: CustomName[]; tags: Record<string, Gender>; duels: Duel[]; couch: Couch | null }> {
   const [c, f, d, k] = await Promise.all([
-    supabase.from('custom_names').select('id, name, gender').eq('session_id', sessionId),
-    supabase.from('name_tags').select('item_id, gender').eq('session_id', sessionId),
-    supabase.from('duels').select('id, user_id, winner, loser, created_at').eq('session_id', sessionId),
+    fetchPaged<any>((from, to) => supabase.from('custom_names').select('id, name, gender').eq('session_id', sessionId).order('id').range(from, to)),
+    fetchPaged<any>((from, to) => supabase.from('name_tags').select('item_id, gender').eq('session_id', sessionId).order('item_id').range(from, to)),
+    fetchPaged<any>((from, to) => supabase.from('duels').select('id, user_id, winner, loser, created_at').eq('session_id', sessionId).order('id').range(from, to)),
     supabase.from('couch').select('started_by, seed, active, started_at').eq('session_id', sessionId).maybeSingle(),
   ]);
-  for (const r of [c, f, d, k]) if (r.error) throw r.error;
+  if (k.error) throw k.error;
   return {
-    custom: (c.data ?? []) as CustomName[],
-    tags: Object.fromEntries((f.data ?? []).map((r: any) => [r.item_id, r.gender as Gender])),
-    duels: (d.data ?? []).map((r: any) => ({ id: r.id, userId: r.user_id, winner: r.winner, loser: r.loser, at: new Date(r.created_at).getTime() })),
+    custom: c as CustomName[],
+    tags: Object.fromEntries(f.map((r: any) => [r.item_id, r.gender as Gender])),
+    duels: d.map((r: any) => ({ id: r.id, userId: r.user_id, winner: r.winner, loser: r.loser, at: new Date(r.created_at).getTime() })),
     couch: k.data ? { startedBy: k.data.started_by, seed: k.data.seed, active: k.data.active, startedAt: new Date(k.data.started_at).getTime() } : null,
   };
 }

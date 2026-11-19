@@ -79,7 +79,7 @@ export default function SettingsScreen() {
       </Section>
 
       {/* Bump with each deploy, so you can tell which version a phone is running. */}
-      <Text style={[type.caption, { color: t.muted, textAlign: 'center', marginTop: 24 }]}>Build 2026-11-14 · card fix</Text>
+      <Text style={[type.caption, { color: t.muted, textAlign: 'center', marginTop: 24 }]}>Build 2026-11-19 · all answers load</Text>
 
       <Sheet visible={!!confirm} onClose={() => setConfirm(null)}>
         <Text style={[type.title, { color: t.ink }]}>{confirm === 'reset' ? 'Clear your answers?' : 'Leave this list?'}</Text>
