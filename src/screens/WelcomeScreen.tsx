@@ -6,7 +6,7 @@ import { clearUrlParams, inviteCodeFromUrl } from '../lib/platform';
 import { Button, Field, Screen, TopBar } from '../components/ui';
 import { font, type, useTheme } from '../theme';
 
-type Step = 'start' | 'create' | 'join' | 'email' | 'code';
+type Step = 'start' | 'create' | 'join' | 'email' | 'code' | 'recover';
 
 export default function WelcomeScreen() {
   const t = useTheme();
@@ -18,12 +18,14 @@ export default function WelcomeScreen() {
   const [code, setCode] = useState(invite?.toUpperCase() ?? '');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
+  const [recovery, setRecovery] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const setupError = useStore((s) => s.error);
   const createSession = useStore((s) => s.createSession);
   const joinSession = useStore((s) => s.joinSession);
   const signedInWithEmail = useStore((s) => s.signedInWithEmail);
+  const recoverWithCode = useStore((s) => s.recoverWithCode);
 
   async function run(fn: () => Promise<void>) {
     setBusy(true);
@@ -68,7 +70,7 @@ export default function WelcomeScreen() {
         </Screen>
       ) : (
         <Screen scroll edges={['top', 'bottom']}>
-          <TopBar back="Back" onBack={() => go(step === 'code' ? 'email' : 'start')} />
+          <TopBar back="Back" onBack={() => go(step === 'code' || step === 'recover' ? 'email' : 'start')} />
           {step === 'create' && (
             <View style={s.form}>
               <Text style={[type.title, { color: t.ink }]} accessibilityRole="header">Your list</Text>
@@ -119,9 +121,37 @@ export default function WelcomeScreen() {
                 await sendLoginCode(email.trim());
                 go('code');
               })} />
+              <Pressable onPress={() => go('recover')} accessibilityRole="button" style={s.link}>
+                <Text style={[type.callout, { color: t.ink, fontFamily: font.semibold, textDecorationLine: 'underline' }]}>I have a recovery code</Text>
+              </Pressable>
               <Text style={[type.caption, { color: t.muted, fontFamily: font.regular }]}>
-                No email saved? Ask your partner to tap “Let them back in” in Settings, then join with their code. Your answers come back too.
+                Neither? Ask your partner to tap “Let them back in” in Settings, then join with their code. Your answers come back too.
               </Text>
+            </View>
+          )}
+
+          {step === 'recover' && (
+            <View style={s.form}>
+              <Text style={[type.title, { color: t.ink }]} accessibilityRole="header">Recovery code</Text>
+              <Text style={[type.body, { color: t.muted }]}>The 12-letter code you saved from Settings.</Text>
+              <Field
+                label="Code"
+                value={recovery}
+                onChangeText={(v) => setRecovery(v.toUpperCase().replace(/[^A-Z0-9-]/g, ''))}
+                placeholder="XXXX-XXXX-XXXX"
+                autoCapitalize="characters"
+                autoCorrect={false}
+                maxLength={14}
+                style={{ fontFamily: font.bold, fontSize: 22, letterSpacing: 2 }}
+              />
+              {err}
+              <Button
+                label="Get my list back"
+                variant="dark"
+                loading={busy}
+                disabled={recovery.replace(/-/g, '').length < 12}
+                onPress={() => run(() => recoverWithCode(recovery))}
+              />
             </View>
           )}
 
@@ -171,6 +201,7 @@ function friendly(msg?: string): string {
   if (!msg) return 'Something went wrong. Check your connection and try again.';
   if (/signups not allowed|user not found/i.test(msg)) return 'No list is saved under that email. Ask your partner to tap “Let them back in” in Settings, then join with their code.';
   if (/expired or is invalid/i.test(msg)) return 'That code didn’t work. Check the latest email and try again.';
+  if (/recovery code didn.t work/i.test(msg)) return 'That code didn’t work. Check it against the one you saved. A code stops working once it’s used or a new one is made.';
   if (/failed to fetch|network/i.test(msg)) return 'You’re offline. Try again when you have signal.';
   return msg;
 }

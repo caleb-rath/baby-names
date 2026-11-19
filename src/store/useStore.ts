@@ -37,6 +37,8 @@ interface State {
   alerted: Record<string, true> | null;
   /** You closed the "add a backup email" nudge. */
   emailNudgeDismissed: boolean;
+  /** When you last made a recovery code on this phone. Only a hash is on the server, so the code itself isn't kept. */
+  recoveryCodeAt: number | null;
   sync: SyncStatus;
   error: string | null;
 
@@ -46,6 +48,9 @@ interface State {
   /** Both of you started a list: move to your partner's, bringing your answers along. */
   joinPartnerList: (code: string) => Promise<void>;
   signedInWithEmail: (userId: string, email: string) => Promise<boolean>;
+  /** New phone, no email: a recovery code moves your old account onto this one. */
+  recoverWithCode: (code: string) => Promise<void>;
+  makeRecoveryCode: () => Promise<string>;
   leaveSession: () => Promise<void>;
   refresh: () => Promise<void>;
   flush: () => Promise<void>;
@@ -171,6 +176,7 @@ export const useStore = create<State>()(
         sync: 'idle',
         error: null,
         emailNudgeDismissed: false,
+        recoveryCodeAt: null,
 
         init: async () => {
           try {
@@ -223,11 +229,26 @@ export const useStore = create<State>()(
         signedInWithEmail: async (userId, email) => {
           if (channel) api.closeChannel(channel);
           channel = null;
-          set({ ...emptySession(), userId, email });
+          set({ ...emptySession(), userId, email, recoveryCodeAt: null });
           const found = await api.findMySession();
           if (!found) return false;
           await enter(found);
           return true;
+        },
+
+        recoverWithCode: async (code) => {
+          const id = await api.recoverWithCode(code);
+          if (channel) api.closeChannel(channel);
+          channel = null;
+          // The old code is used up, so this phone has none until you make a new one.
+          set({ ...emptySession(), recoveryCodeAt: null, emailNudgeDismissed: false });
+          await enter(id);
+        },
+
+        makeRecoveryCode: async () => {
+          const code = await api.makeRecoveryCode();
+          set({ recoveryCodeAt: Date.now() });
+          return code;
         },
 
         leaveSession: async () => {
@@ -493,6 +514,7 @@ export const useStore = create<State>()(
         justCreated: s.justCreated,
         alerted: s.alerted,
         emailNudgeDismissed: s.emailNudgeDismissed,
+        recoveryCodeAt: s.recoveryCodeAt,
       }),
     }
   )

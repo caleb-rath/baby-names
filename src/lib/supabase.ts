@@ -49,6 +49,20 @@ export async function verifyLoginCode(email: string, token: string): Promise<str
   return data.user.id;
 }
 
+/** Makes a new recovery code for this account (the old one stops working) and returns it, e.g. "K7QM-2XPA-9RTD". */
+export async function makeRecoveryCode(): Promise<string> {
+  const { data, error } = await supabase.rpc('make_recovery_code');
+  if (error) throw new Error(error.message);
+  return data as string;
+}
+
+/** New phone: moves the account that owns this code (list spot, answers and all) onto the account signed in now. */
+export async function recoverWithCode(code: string): Promise<string> {
+  const { data, error } = await supabase.rpc('recover_with_code', { p_code: code });
+  if (error) throw new Error(error.message);
+  return (data as SessionRow).id;
+}
+
 interface SessionRow {
   id: string;
   code: string;

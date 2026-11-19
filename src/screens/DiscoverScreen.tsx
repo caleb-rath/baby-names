@@ -29,6 +29,7 @@ export default function DiscoverScreen() {
   const streak = useStreak();
   const email = useStore((s) => s.email);
   const nudgeDismissed = useStore((s) => s.emailNudgeDismissed);
+  const hasRecoveryCode = useStore((s) => !!s.recoveryCodeAt);
   const matchCount = useOurNames().length;
   const [toast, setToast] = useState({ text: null as string | null, id: 0 });
   const [starting, setStarting] = useState(false);
@@ -119,10 +120,10 @@ export default function DiscoverScreen() {
         </Pressable>
       )}
 
-      {matchCount > 0 && !email && !nudgeDismissed && (
+      {matchCount > 0 && !email && !hasRecoveryCode && !nudgeDismissed && (
         <View style={[s.nudge, { backgroundColor: t.surfaceAlt }]}>
           <Pressable onPress={() => nav.navigate('Settings')} accessibilityRole="button" style={{ flex: 1, minHeight: 44, justifyContent: 'center' }}>
-            <Text style={[type.callout, { color: t.ink, fontFamily: font.semibold }]}>Add a backup email so a new phone can get back in ›</Text>
+            <Text style={[type.callout, { color: t.ink, fontFamily: font.semibold }]}>Save an email or recovery code so a new phone can get back in ›</Text>
           </Pressable>
           <Pressable onPress={() => useStore.getState().dismissEmailNudge()} accessibilityRole="button" accessibilityLabel="Not now" hitSlop={8} style={{ padding: 6 }}>
             <Ionicons name="close" size={18} color={t.muted} />

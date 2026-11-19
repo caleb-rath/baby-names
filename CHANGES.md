@@ -1,3 +1,15 @@
+# BabyNames v3.2: getting back in without an email
+
+## Do this once
+1. **Supabase SQL editor:** run `supabase/v3.2-recovery.sql`. Keeps your data. Adds a `recovery_codes` table and three functions.
+2. Build and deploy as usual.
+
+## What's new
+- **Recovery code** (Settings → "If you lose this phone", shown only when no email is saved). Makes a 12-letter code like `K7QM-2XPA-9RTD`, shown once, with Copy and Save to… buttons. Only a hash is stored and no phone can read that table, so your partner can't see or use your code. Making a new one kills the old one; using one kills it too.
+- **New phone:** "I've used BabyNames before" → "I have a recovery code" moves your old spot, answers, This or That picks and added names onto the new phone's account.
+- The Discover nudge now says "Save an email or recovery code" and hides once you've made a code.
+- **Lost account with no email and no code:** if your partner still has the app, "Let them back in" (v3.1) still works. If not, `supabase/recover-account-manually.sql` walks you through moving it by hand in the SQL editor.
+
 # BabyNames v3.1: fixes from the round-3 stress test
 
 Findings are in `babynames-review/round3/` (SUMMARY.md). This is everything from "fix first", the fun fixes, and the P1 text cuts.

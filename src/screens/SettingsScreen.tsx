@@ -4,10 +4,10 @@ import { useRoute } from '@react-navigation/native';
 import { useStore } from '../store/useStore';
 import { usePartnerName } from '../store/hooks';
 import { confirmLinkEmail, linkEmail } from '../lib/supabase';
-import { appUrl, canInstall, install, isInstalled, onInstallAvailable, shareText } from '../lib/platform';
+import { appUrl, canInstall, copy, install, isInstalled, onInstallAvailable, shareText } from '../lib/platform';
 import { FILTER_OPTIONS } from '../lib/filters';
 import { Button, Field, Screen, Segmented, Sheet, TopBar } from '../components/ui';
-import { type, useTheme } from '../theme';
+import { font, type, useTheme } from '../theme';
 
 export default function SettingsScreen() {
   const t = useTheme();
@@ -57,8 +57,9 @@ export default function SettingsScreen() {
         </Section>
       )}
 
-      <Section title="Backup email">
+      <Section title="If you lose this phone">
         <SaveEmail email={email} />
+        {!email && <RecoveryCode />}
       </Section>
 
       {Platform.OS === 'web' && !isInstalled() && (
@@ -208,7 +209,7 @@ function SaveEmail({ email }: { email: string | null }) {
   };
   return (
     <View style={{ gap: 12 }}>
-      <Text style={[type.callout, { color: t.muted }]}>So you can sign back in on a new phone.</Text>
+      <Text style={[type.callout, { color: t.muted }]}>Save an email, or make a recovery code below. Either gets your answers back on a new phone.</Text>
       {!sent ? (
         <>
           <Field label="Email" value={value} onChangeText={setValue} keyboardType="email-address" autoCapitalize="none" autoComplete="email" />
@@ -224,6 +225,57 @@ function SaveEmail({ email }: { email: string | null }) {
             await confirmLinkEmail(value.trim(), code);
             useStore.getState().setEmail(value.trim());
           })} />
+        </>
+      )}
+      {error && <Text style={[type.callout, { color: t.coral }]}>{error}</Text>}
+    </View>
+  );
+}
+
+/** For no email: a code only you see. It's shown once; the server keeps just a hash. */
+function RecoveryCode() {
+  const t = useTheme();
+  const savedAt = useStore((s) => s.recoveryCodeAt);
+  const [code, setCode] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const make = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      setCode(await useStore.getState().makeRecoveryCode());
+      setCopied(false);
+    } catch (e: any) {
+      setError(/fetch|network/i.test(e?.message ?? '') ? 'You’re offline. Try again when you have signal.' : e?.message ?? 'That didn’t work. Try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <View style={{ gap: 10, marginTop: 8 }}>
+      <Text style={[type.callout, { color: t.ink, fontFamily: font.semibold }]}>Recovery code</Text>
+      {code ? (
+        <>
+          <Text selectable style={[type.title, { color: t.ink, letterSpacing: 2 }]}>{code}</Text>
+          <Text style={[type.callout, { color: t.muted }]}>
+            Save it somewhere that isn’t this phone, like your password manager or Google Keep. This is the only time it’s shown. On a new phone, tap “I’ve used BabyNames before”, then “I have a recovery code”.
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <Button small variant="dark" icon="copy-outline" label={copied ? 'Copied' : 'Copy'} onPress={() => copy(code).then(() => setCopied(true)).catch(() => {})} />
+            <Button small variant="secondary" icon="share-outline" label="Save to…" onPress={() => shareText(`BabyNames recovery code: ${code}`).catch(() => {})} />
+          </View>
+        </>
+      ) : (
+        <>
+          <Text style={[type.callout, { color: t.muted }]}>
+            {savedAt
+              ? `You made one on ${new Date(savedAt).toLocaleDateString()}. Lost it? Make a new one; the old one stops working.`
+              : 'No email? A code works too. Only you see it.'}
+          </Text>
+          <Button small variant={savedAt ? 'secondary' : 'dark'} label={savedAt ? 'Make a new code' : 'Make a recovery code'} loading={busy} onPress={make} style={{ alignSelf: 'flex-start' }} />
         </>
       )}
       {error && <Text style={[type.callout, { color: t.coral }]}>{error}</Text>}
